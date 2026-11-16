@@ -77,7 +77,10 @@ What the harness owes:
   the request returns to the model as declined. An unanswered card mints nothing, and a new
   request composes a new card.
 - **The card states the terms.** It states what `place_secret`'s card states, except the
-  sentence on a key the operator minted at its service. It also says that the key is minted from
+  sentence on a key the operator minted at its service and, on a multi-tenant machine,
+  `ARC-43`'s statement of `ARC-37`'s rule and its not-spendable confirmation: in their place the
+  card carries the classification question below, and the key is minted only once the machine is
+  single-purpose. It also says that the key is minted from
   the operator's inference balance, with the cap and expiry below; that it outlives the session
   and ends only when its machine is destroyed, its expiry passes or the operator revokes it; and
   that it can read the account's usage history, as a session key can: `ARC-31a` says "A session
@@ -97,16 +100,21 @@ What the harness owes:
 - **One attempt per press, recorded first.** The mint is the inference adapter's own off-machine
   call (`SEC-12`), under `ARC-31a`'s intent, issuer-validation and clock rules for one mint, with
   the press where a session's confirmation stands. Its terminal follows `ARC-31a`'s terminal
-  rules except the seal: it records the key's identifier and the issuer's accepted facts, never
-  the key, and no lost-key hold applies. A durable intent consumes the press's one attempt. A refused, lost, malformed or uncertain mint, or broader, different,
+  rules, the seal included: it records the key's identifier and the issuer's accepted facts, and
+  carries the key privately in the encrypted local record under the data key, beside the
+  inference account credential; its durable append MUST precede the placement's send. No
+  lost-key hold applies. A durable intent consumes the press's one attempt. A refused, lost, malformed or uncertain mint, or broader, different,
   missing or unverifiable acceptance, places nothing and is never retried; a known identifier is
   revoked.
 - **The key goes only to its placement.** From the validated mint response the key travels only
   as `place_secret`'s value: the job's standard input, under its custody, scan-reference
-  (`SEC-5` row 23) and cross-check rules. It never enters model context, and it is never
-  journaled, kept in the local store, exported in the sheet or shown. `place_secret`'s value
-  checks apply to it, except that it is not compared with itself as a credential the harness
-  holds. A key whose placement is refused, cancelled or never sent, or whose bytes are lost
+  (`SEC-5` row 23) and cross-check rules. It never enters model context or the transcript, and
+  it is never exported in the sheet or shown. Its only other copy is the sealed one in its mint
+  terminal (above), which survives Lock and reload and, like a session key's seal, stays in the
+  append-only journal; once the key is confirmed revoked or past its expiry that copy supplies no
+  authority and is never placed or used again. `place_secret`'s value checks apply to the key,
+  except that it is not compared with itself as a credential the harness holds, and its own
+  sealed mint terminal is permitted custody of it, not a kept record carrying it (`SEC-5`). A key whose placement is refused, cancelled or never sent, or whose bytes are lost
   before they are sent, is revoked by its identifier, and nothing mints a replacement. In every
   other rule that names an application secret or `SEC-5` row 12, its placement is an application
   secret's placement.
@@ -135,11 +143,19 @@ What the harness owes:
   confirmation; unknown revocation stays unknown, and expiry is not evidence of it. Revocation
   ends the key, not its placement: the placement, its scan reference and its placement listing
   end as `ARC-43` and `SEC-5` say. A rotation, through either job, revokes nothing.
-- **Not on a multi-tenant machine.** The key spends inference credit, and `ARC-37` says "A
-  multi-tenant machine MUST NOT hold spendable key material". On a multi-tenant machine
-  (`ARC-36`), an ad-hoc machine bound under the harness default included, a request for one is a
-  request requiring a less restrictive class: it is refused before any card, as `ARC-36a` refuses
-  such a request, and nothing is minted.
+- **On a multi-tenant machine, the card asks first.** The key spends inference credit, and
+  `ARC-37` says "A multi-tenant machine MUST NOT hold spendable key material". On an ad-hoc
+  machine bound under the harness default, the key's card carries the classification question
+  `ARC-36a`'s one exception allows, unless the card offers only "Don't" for another reason (a
+  pinned profile whose unit is not the US dollar or that does not support the cap or expiry,
+  above), and "Create key" mints only together with the operator's answer that the machine
+  serves no parties they have never met, which makes it single-purpose first. The question's
+  answers come before the key's: "Create key" is offered only once the operator has answered
+  "No", and with "Yes", "Not sure" or no answer the card's only way out is
+  "Don't". Any other answer, or none, keeps it multi-tenant and mints nothing. On any other
+  multi-tenant machine (`ARC-36`), its class an operator's answer or a profile's preset, the
+  request is refused before any card, as `ARC-36a` refuses a request requiring a less
+  restrictive class.
 - **Not without the account credential.** On the bring-your-own path nothing is minted: the
   request is refused, and the operator may place a key obtained elsewhere with `place_secret`.
 
@@ -205,11 +221,12 @@ answers "not sure" has a **multi-tenant** machine. The model MAY propose a tight
 single-purpose to multi-tenant, and nothing else: it never relaxes a class or supplies or
 relaxes the operator's answer.
 
-Once an ad-hoc machine has been bound under the harness default, the harness MUST refuse a
-request requiring a less restrictive class for the rest of that session and in any later
+Apart from the one exception below, once an ad-hoc machine has been bound under the harness
+default, the harness MUST refuse a request requiring a less restrictive class for the rest of that session and in any later
 session that re-enters it (`SEC-1`), explaining the concrete conflict without presenting the
-classification questions. Its class does not relax in that session or in a later session that
-re-enters the machine (`SEC-1`), which is not its initial admission: the question path stays
+classification questions. Apart from that exception, its class does not relax in that session or
+in a later session that re-enters the machine (`SEC-1`), which is not its initial admission: the
+question path stays
 closed, and the journaled class and harness-default provenance carry over; those
 requests MUST leave the journaled class and harness-default provenance
 unchanged. The question path supplies no exception to `SEC-1`'s binding, re-entry, growth or
@@ -220,6 +237,23 @@ operator confirms the value is not spendable before it is sent; without that con
 nothing is placed". A goal or declaration supplies no exception. A one-machine task needing
 no wallet can proceed under these restrictions without a classification screen
 ([ADR-0073](./docs/adr/0073-ad-hoc-conservative-class-default.md)).
+
+**The one exception: the application inference key's card.** When the model asks for an
+application inference key (`ARC-1b`) on an ad-hoc machine bound under the harness default, the
+key's card MAY present the signed, harness-authored classification question, with nothing
+preselected; the model MUST NOT word, answer or preselect it, and the rules above against
+manufacturing an operator answer apply. Only the operator's explicit answer that the machine
+serves no parties they have never met, given on that card together with its "Create key", makes
+the machine single-purpose. That answer and its resolved class MUST be journaled with
+operator-answer provenance before the key's mint intent, and they carry over to later sessions
+as any operator answer does. "Not sure", an answer that the machine does serve such parties, no
+answer, and "Don't" change nothing: the class and its harness-default provenance stay, and
+nothing is minted. No other request uses this path, and a machine whose class came from an
+operator's answer or a profile's preset is never asked on it. Nor is a machine restored from a
+sheet (`STA-16`): the sheet carries its class but not that class's provenance, so a restored
+class never counts as a harness default here. The path supplies no exception to
+`SEC-1`'s binding, re-entry, growth or exposure checks
+([ADR-0088](./docs/adr/0088-the-harness-mints-an-application-inference-key-that-outlives-the-session.md)).
 
 *What this requirement used to say* was that hardening a multi-tenant machine is a different
 problem and that `ARC-17` and `OPN-14` were written for the single-purpose case. Both are now
@@ -591,7 +625,8 @@ here is non-waivable:
   reservation, persistence or placement dispatch, check actual kept records and required
   placement facts, including the machine, application name, distinct secret name, path,
   purpose and approval. Refuse a placement if a kept record already contains a carried
-  occurrence of its value, or if its required recorded facts would carry that value and
+  occurrence of its value (an application inference key's own sealed mint terminal is not
+  one: `SEC-5`), or if its required recorded facts would carry that value and
   cannot satisfy custody without changing those facts. Independent structure supplies no
   refusal. The card says to mint or choose a different value at the service and offers no
   override or route through command text. Refusal wording and parser diagnostics MUST NOT
@@ -623,7 +658,8 @@ here is non-waivable:
 - **On a multi-tenant machine (`ARC-36`) the card states `ARC-37`'s rule** — no spendable key
   material on this machine — and the operator confirms the value is not spendable before it is
   sent; without that confirmation nothing is placed. The harness cannot classify a value, so the
-  confirmation is the operator's, recorded with the placement.
+  confirmation is the operator's, recorded with the placement. A `place_inference_key` card
+  carries `ARC-36a`'s classification question instead (`ARC-1b`).
 - **The placed secret is listed in the trust display** until it is rotated or the machine is
   destroyed (`SEC-6`; at LNVPS, the vendor's confirmed deletion, `SEC-5` row 12), or until the
   operator reports it revoked (below), when it moves to history labelled operator-reported.

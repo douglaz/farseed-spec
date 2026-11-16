@@ -53,6 +53,46 @@ the key; `CNF-118` tests it.
   expired, whatever its placement's state, so a key that outlives its placement can still be
   revoked.
 
+## Amendments, 2026-11-16
+
+Two decisions taken after this record first merged change it.
+
+**The key card may ask whether the machine is shared.** As first merged, the key was refused on
+a multi-tenant machine, and an ad-hoc machine is multi-tenant by default (`ARC-36a`,
+[ADR-0073](./0073-ad-hoc-conservative-class-default.md)), so the default path got no key. Told
+that the refusal rested on `ARC-37`, the owner said: "perhaps it's spendanble, but why the
+machine is shared? I don't think it is". Asked how to proceed, the owner picked "Ask on the key
+card", whose option read: "When the key is first needed, the card also asks you to confirm the
+machine serves only you. Loosens the 'never relax after connecting' rule, but only on your own
+press of a card tau-web wrote." `ARC-36a` now holds one exception to its rule that a machine
+bound under the harness default never relaxes: on an ad-hoc machine bound under the harness
+default, the key's card may present the signed, harness-authored classification question with
+nothing preselected, and only the operator's explicit answer that the machine serves no parties
+they have never met, given with "Create key", makes it single-purpose, journaled with
+operator-answer provenance before the mint. Any other answer, no answer, or "Don't" changes
+nothing and mints nothing. No other request uses that path, and a machine whose class came from
+an operator's answer or a profile's preset is never asked on it; nor is a machine restored from a
+sheet, which carries the class but not its provenance. `ARC-37` is unchanged: the key
+still counts as spendable, and a multi-tenant machine still holds none. This partly supersedes
+ADR-0073's decision that the question path closes for good at binding.
+
+**The key is kept sealed in the encrypted local store.** As first merged, the key lived only in
+working memory between its mint and its placement. In the implementation's review, three of
+three reviewers recommended keeping it in the encrypted local store, and that pick is accepted
+under the owner's 2026-11-05 panel rule. Their strongest argument: "the encrypted store already
+holds the account credential, which can mint unlimited keys; a 0.25 USD key adds nothing for an
+attacker of the store, and storing it keeps echo protection and recovery working across Lock and
+reload". The mint terminal now follows `ARC-31a`'s seal: it carries the key privately in the
+encrypted local record under the data key, beside the inference account credential, and its
+durable append precedes the placement's send. Like a session key's seal, the sealed copy stays in
+the append-only journal; once the key is confirmed revoked or past its expiry it supplies no
+authority. `SEC-5` row 24 says so, and `SEC-5`'s custody rule gains one exception: that terminal
+is permitted custody of the key, not a carried occurrence that would refuse its own placement,
+and it is the only journal event that may carry the key. The key is still never in model
+context, the transcript or the recovery sheet, and no lost-key hold applies. On a multi-tenant
+machine the key's card carries the classification question in place of `ARC-43`'s not-spendable
+confirmation, and offers "Create key" only after the answer "No".
+
 ## What is loosened
 
 - `ARC-1`: a machine may hold an inference key minted from the operator's inference account.
@@ -72,20 +112,22 @@ the key; `CNF-118` tests it.
   what they cost.
 - Each key adds to what a leak can spend: the lesser of the remaining balance and its cap, per
   key, under the conditions `ARC-31a` sets on a session key's bound.
+- `ARC-36a`: a machine bound under the harness default can now become single-purpose after
+  binding, on the operator's own answer on the key card, and later sessions then treat it as
+  single-purpose.
+- The encrypted local store holds each key, sealed in its mint terminal, beside the inference
+  account credential, and `SEC-5`'s custody rule admits that one journal event carrying the raw
+  key, which it otherwise forbids for an application secret.
 
 ## Choices made in drafting
 
 The owner's words left these open; each follows from an existing rule or is the stricter
 reading, and each is open to review.
 
-- **Not on a multi-tenant machine, for now.** `ARC-37` says "A multi-tenant machine MUST NOT hold
-  spendable key material", and the key spends inference credit. Whether a capped inference key
-  with no funding authority is the spendable key material that rule bars is not decided here:
-  narrowing a blocking rule is the owner's call. Until then the strict reading stands, and a
-  request on such a machine is refused as `ARC-36a` refuses a request needing a less restrictive
-  class. Because an ad-hoc machine is multi-tenant by default (`ARC-36a`), the key is available
-  only where the operator answered single-purpose before binding. This is the open question of
-  this record.
+- **Refused on a multi-tenant machine unless the key card relaxes it.** `ARC-37` says "A
+  multi-tenant machine MUST NOT hold spendable key material", and the key spends inference
+  credit. A machine whose class came from an operator's answer or a profile's preset is refused
+  before any card; on a machine bound under the harness default, the amendment above applies.
 - **The procured path only.** Without an inference account credential there is nothing to mint
   from.
 - **Revocation at destruction is requested at the confirmed destroy**, at LNVPS the confirmed stop
@@ -96,9 +138,6 @@ reading, and each is open to review.
   the old key ends by one of the three.
 - **Revocation ends the key, not its placement.** The placement's scan reference and listing end
   as `ARC-43` and `SEC-5` say, so a revoked key's bytes stay protected in later output.
-- **The terminal does not seal the key.** A session key's mint terminal keeps the key in the
-  local store; this key's terminal keeps only its identifier and the issuer's accepted facts, so
-  the key lives nowhere but in transit and on its machine.
 
 ## Formal companion
 
@@ -113,3 +152,6 @@ None. `ARC-1b` is Markdown only, like `place_secret`'s rules, and no declaration
 | Hand the application the session's own inference key | Still rejected, as ADR-0039 rejected it: that key is the session's and is revoked at its End. |
 | Revoke the application's key when the session ends | Not chosen by the owner, who chose "agree, outlive the session". The application keeps running after the session; a key revoked at End would stop it. |
 | Mint with no approval press | Not chosen by the owner, who chose one press, "Create key" or "Don't". |
+| Rule that a capped, revocable key is not `ARC-37`'s spendable key material, so it works on any machine | Picked by the owner, then withdrawn the same day for "Ask on the key card": the key may well spend, and the real question is whether the machine is shared. |
+| Ask the class up front, at setup, before binding | Not chosen by the owner, who chose to ask on the key card when the key is first needed. |
+| Keep the key in working memory only (this record as first merged) | Not chosen: three of three reviewers preferred the encrypted store, accepted under the owner's 2026-11-05 panel rule; the store already holds the account credential, and memory-only loses echo protection and recovery across Lock and reload. |

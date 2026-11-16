@@ -1094,22 +1094,41 @@ an item that tests a mode's conditions or its label is tiered by them like any o
       only on the operator's press, reaches only its placement, outlives the session and ends
       only in the three ways `ARC-1b` lists. On the procured path, with the model asking through
       `request_harness_job` naming `place_inference_key`:
-      (a) The card offers exactly "Create key" and "Don't", with the cap of 0.25 US dollars,
+      (a) On a single-purpose machine the card offers exactly "Create key" and "Don't", with
+      the cap of 0.25 US dollars,
       the 30-day expiry and the terms `ARC-1b` lists. "Don't", and a card left unanswered, record
       no mint intent and send nothing to the aggregator, verified at the aggregator by no new key
       and no new spend; the request returns declined. A refusal by a `place_secret` check that
-      reads no value, a multi-tenant machine (an ad-hoc machine bound under the harness default
-      included), the bring-your-own path, a profile whose unit is not the US dollar and a profile
-      that does not support the cap or expiry each mint nothing and offer no "Create key".
+      reads no value, a multi-tenant machine whose class came from an operator's answer or a
+      profile's preset or was restored from a sheet, the bring-your-own path, a profile whose
+      unit is not the US dollar and a profile that does not support the cap or expiry each mint
+      nothing, offer no "Create key" and present no classification question.
+      (a2) On an ad-hoc machine bound under the harness default, the card presents the signed
+      classification question with nothing preselected, in place of `ARC-43`'s not-spendable
+      confirmation, and offers "Create key" only after the answer "No"; the question text,
+      answers and note match `bundle/lockdown.toml`. Answer "No" and press "Create key": the answer and the single-purpose class
+      are journaled with operator-answer provenance before the mint intent, and carry over to a
+      later session that re-enters the machine. In separate runs answer "Not sure", answer "Yes",
+      and give no answer: in each, "Create key" is not offered, an attempt to submit it is refused,
+      and only "Don't" leaves the card. Then answer "No" and press "Don't". Each of these runs mints
+      nothing, sends nothing to the aggregator, and leaves the multi-tenant class and
+      harness-default provenance unchanged. Model text, a
+      suggested or previously displayed answer, restored UI state and replayed provenance
+      manufacture no answer. A different request needing a less restrictive class on the same
+      machine is still refused with no question (`CNF-100`).
       (b) "Create key" records the mint intent before the send (`SEC-12`), one attempt only: a
       lost, refused or uncertain mint, and broader, different, missing or unverifiable acceptance,
       place nothing and are never retried, and a known identifier is revoked. The issuer's
       accepted cap and expiry match the request.
       (c) Search as `CNF-16` searches, with the minted key as the marked value: the model input,
-      journal, local store, transcript, machine job record and directory, logs, requests to the
-      app's origin and an exported sheet carry no carried occurrence of it, and the destination
-      holds exactly the key's bytes. The machine's state records the key's identifier, and the
-      mint terminal records the identifier and accepted facts without the key.
+      the journal and local store outside the sealed mint terminal's encrypted record, the
+      transcript, machine job record and directory, logs, requests to the app's origin and an
+      exported sheet carry no carried occurrence of it, and the destination
+      holds exactly the key's bytes. The machine's state records the key's identifier. The mint
+      terminal's durable append, carrying the key encrypted under the data key, precedes the
+      placement's send, and no other journal event carries the key; the placement is not refused
+      for that terminal. The sealed copy survives Lock and reload, and once the key is confirmed
+      revoked or past its expiry no placement or call uses it.
       (d) After the placing session's End, and after an explicit app Lock and Unlock, the key is
       still accepted at the issuer and no revoke of it was sent.
       (e) Confirm the destroy of its machine (at LNVPS, the stop that stands in for one): a revoke
@@ -1415,8 +1434,9 @@ an item that tests a mode's conditions or its label is tiered by them like any o
       relax an operator's answer: only the tightening proposal is permitted, without treating
       that permission as a decision on tightening after binding (`TASKS.md`).
       Bind an ad-hoc machine under the harness default, then request behavior requiring a
-      less restrictive class: the harness refuses with the concrete conflict explained and
-      presents no classification question. Inspect the journal: the multi-tenant class and
+      less restrictive class, other than an application inference key (`ARC-36a`'s one
+      exception, tested by `CNF-118`): the harness refuses with the concrete conflict explained
+      and presents no classification question. Inspect the journal: the multi-tenant class and
       harness-default provenance are unchanged, with no operator answer manufactured. Repeat
       the request in the same session, including after same-session resume: each is refused
       with the same explanation, absent question and unchanged class and provenance.
@@ -3326,7 +3346,7 @@ promotion rule above.
 | Attest first-contact route | 18, 23 (attest-window case), 61, 74–75, 109 (attest admission) | Before enabling attest at any vendor that accepts boot configuration, including one used for a jump host. This row does not gate the LNVPS path. |
 | The dedicated path: the construction test bed | 20 (relabel cases), 22, 38, 48, 53 (`delivery_reboot` cases), 55 (`delivery_reboot` case), 62–64, 80, 84, 85–86, 109 (job-read admission), 110, 117 | The Robot dedicated path's own checks, including item 20's relabel cases, only item 84's Robot rescue case, item 53's `delivery_reboot` cases, as the LNVPS-path required row lists them, item 55's `delivery_reboot` settlement case, and item 110's reset-into-rescue, harness-composed `delivery_reboot` and `replace_root_label` refusal cases, and item 117's rescue rekey cases. Item 22 also covers the ordinary ceremony's consumer-side destination source and admission; its signed-addition cases apply where the ceremony makes signed additions, while source-before-dial cases also cover pre-recorded passes. Their by-hand evidence stands (48 is recorded), construction exercises them on the test bed, and they pass on the integrated harness before a dedicated-server path is offered to an operator, which is not before the admission group's gates pass (`STG-23`). Items 62–64 also apply to any typed adapter that rides the pinned tunnel, the LNVPS path's included if its vendor refuses a browser origin. |
 | Untyped scopes, the jump host, sets above one | 7, 12, 14, 23, 27, 29, 31, 33, 42, 91–93, 95 (cases (e) and (f)'s A/B assertions), 96–98, 104–106 | Before enabling an untyped scope, an untyped vendor scope, the jump-host route or a bound set of more than one machine. Item 95's cases (e) and (f) cover A/B output release only after both pastes until M's destruction is confirmed, and the releases and refusals after it; case (e) also covers the copied key on A redacted. Items 7 and 91 cover set growth, subsets and two-machine sets; items 12, 14 and 29 their untyped-scope cases; item 23 the jump-host label; item 42 the untyped-scope half of the trust display; item 93 the jump-host, untyped-scope and larger-set modes, each accepted at the act it governs and restated, with their re-entry and reinstall cases; item 104 an invoice decoded from an untyped response, where the vendor invoices; item 105 the untyped hold's every-job, same-origin, successor and permission-lifetime cases. Item 92's multi-tenant case gates sets above one; its independence-bound case gates the first profile that declares a bound. Repeat item 17 against real untyped responses. |
-| Application inference keys | 118 | Before the harness offers `place_inference_key` (`ARC-1b`), on the procured path; until it passes, the request is refused and no card offers "Create key". Every case, the operator's Revoke included, passes on the integrated harness. |
+| Application inference keys | 118 | Before the harness offers `place_inference_key` (`ARC-1b`), on the procured path; until it passes, the request is refused, no card offers "Create key", and no key card presents `ARC-36a`'s classification question. Every case, the operator's Revoke and the key card's question included, passes on the integrated harness. |
 | Post-harness handoff | 8, 77 | Before enabling any profile that declares one; none is enabled before the admission group's gates pass (`STG-23`). |
 | Scanner and advisory monitoring | 9, 36 | Also complete item 50's scanner case before exposing scanner results. |
 | Paid/public relay access | 57–60, 65, 76 | Before enrolment opens beyond the publisher's fixed record, including item 60's signed pass revocation. The LNVPS path uses item 20's manual retirement route and still requires 81 and 87. |
