@@ -188,6 +188,14 @@ _Avoid_: guarantee, claim (that is `SEC-CLAIM`'s word), invariant (the invariant
 
 ### Roles
 
+**Harness**
+tau-web itself: the program in the operator's browser that runs the model, holds the
+credentials, carries out the model's requests on machines as **harness jobs** — the small
+helpers it places on a machine to run them included — and shows the cards. The model is never
+part of it, and neither is an **operator's application** or anything that tests tau-web.
+_Avoid_: app (read as an operator's application), agent (the model is the agent), "harness" for
+a test driver
+
 **Session** · `ARC-12`, `SEC-1`
 One run of the harness under one set of model weights, responsible for its **bound set** —
 one machine by default. One context: whatever any machine of the set returns is read by the
@@ -702,21 +710,68 @@ able to mint keys. A session key is minted from it with a cap and an expiry and 
 session ends. A session holds only the second.
 _Avoid_: "the inference key" for either one on its own; API key (says nothing about which tier)
 
+**Application inference key** · `ARC-1b`, `SEC-5` row 24
+A key the harness mints from the operator's inference account credential for one **operator's
+application**, with its own cap and expiry, at the model's request and once the operator approves
+it on a card, and places on that
+application's machine without it entering the model's context, as an **application secret** is.
+Never the session's key, and it outlives the session: it ends when its machine is destroyed, its
+expiry passes, or the operator revokes it. Decided 2026-11-16 (ADR-0088).
+_Avoid_: session inference key (that one never reaches a machine and ends with the session),
+"the application's API key" (says nothing about who minted it)
+
 ### Money
 
 **Recurring cost** · `ARC-29`
 The machines. Billed by the vendor to the operator: to their own account, or by an invoice
-their own wallet pays. The app never pays it and cannot stop it.
+their own wallet pays. The harness never pays it and cannot stop it.
 
 **One-off cost** · `ARC-30`
-Inference credits. The app retrieves an invoice; the operator's wallet pays it. A machine
+Inference credits. The harness retrieves an invoice; the operator's wallet pays it. A machine
 bought by invoice is paid the same way.
 
 **Settled invoice**
 Evidence that the operator has funded credits at a provider. It does **not** prove which machine
 used which proxy, because one top-up buys many queries.
 
+### Live testing
+
+**Live test**
+One run of the deployed harness on a real machine: a **simulated operator** makes a rough
+request, and an **outside check** judges the result afterwards. *Perfect* means it passed with
+no **live-test findings**.
+_Avoid_: e2e test, rehearsal (the first-stage rehearsal is a different, by-hand exercise)
+
+**Simulated operator**
+The operator as a live test plays it: it states rough wants, never a solution, and never supplies
+a secret.
+_Avoid_: user, test user
+
+**Test driver**
+The program that plays the simulated operator — it presses, pays, and runs the outside check.
+Never part of the harness.
+_Avoid_: harness, test harness, test script
+
+**Outside check**
+What the test driver establishes after a live test, from outside the harness, about outcomes
+only: the application answers at its address, it comes back after a reboot. Never called
+verification ("verify" is reserved).
+_Avoid_: end check, verification
+
+**Live-test finding**
+A way a live test fell short of the request or of what an operator would expect, without failing
+it. Distinct from the findings a delivery is handed over with (`ARC-17`), which are the harness's
+own report.
+_Avoid_: finding unqualified where a delivery's findings are in play
+
 ## Flagged ambiguities
+
+**"App"** names two different things in conversation: the harness ("our app") and the software
+an operator has the harness install ("a store app"). Say **harness** for the first and
+**operator's application** for the second. *Explicit app Lock* keeps its name.
+
+**"Task"** is the page's word for a session, kept because operators read it more easily. It stays
+on the page; everywhere else say **goal** for the operator's words and **session** for the run.
 
 **"Hold"**: qualify `STA-20`'s unresolved-command hold and `ARC-43`'s pending-delivery-check
 hold; `STA-24`'s untyped-vendor-scope hold is a separate rule.

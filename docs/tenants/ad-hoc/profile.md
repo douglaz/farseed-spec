@@ -84,7 +84,8 @@ signed bundle, on the same rule as drift checks.
 ## Secrets and parties
 
 An application secret reaches a machine through `place_secret` and no other way (`ARC-43`,
-`SEC-5` row 12). Where the operator installs an application with a model of its own, that
+`SEC-5` row 12), and an application inference key through `place_inference_key` and no other way
+(`ARC-1b`, `SEC-5` row 24). Where the operator installs an application with a model of its own, that
 model's provider is an elective party (`TRU-E12`).
 
 ## Runtime obligations

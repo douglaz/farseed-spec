@@ -53,7 +53,10 @@ difference.
 **Give the application a capped key minted from the harness's inference account.** Rejected:
 that is a harness credential on a machine, which this record exists to keep impossible. The
 operator obtains the application's key at its own service; a capped or revocable one is the
-better key, and the placement card says so.
+better key, and the placement card says so. *(Reversed on 2026-11-16 by
+[ADR-0088](./0088-the-harness-mints-an-application-inference-key-that-outlives-the-session.md):
+on the operator's press the harness mints an application inference key, which `ARC-1b` makes
+the application's credential, not the harness's.)*
 
 **Hand the application the session's own inference key.** Rejected for the same reason, and
 because that key is revoked when the session ends.

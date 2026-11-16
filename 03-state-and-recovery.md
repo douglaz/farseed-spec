@@ -1510,6 +1510,15 @@ Applications and providers are recorded facts, not approved state, and never use
 unapproved marker. The credential format owns their wire shape and validation; missing or
 malformed application data, and a duplicate JSON member name, MUST be refused before binding.
 
+The sheet MUST carry every application inference key (`ARC-1b`) with a known identifier that the
+journal records neither as confirmed revoked nor as past its expiry, whatever its placement's
+state: the issuer's identifier, the requested cap and expiry, whether the issuer's acceptance was
+validated, its revocation state and the destination it was minted for, never the key or any value
+derived from it. Restore brings each back as of export, so
+that the operator's Revoke and the revocation its machine's destruction requires stay possible.
+The credential format's payload version 9 is the wire; malformed or duplicate records MUST be
+refused before binding.
+
 **A restored sheet is knowledge as of export.** The placement inventory and each machine's state
 as approved — declaration, class, access model and the standing weaker modes — are restored as
 the sheet holds them and MUST be shown as **"unknown since export"** after store loss. That

@@ -162,7 +162,9 @@ an item that tests a mode's conditions or its label is tiered by them like any o
 - [ ] **CNF-15 · BLOCKING** No credential appears in cleartext in origin-private storage,
       local storage, or service-worker caches. *(`STG-10`)*
 - [ ] **CNF-16 · BLOCKING** An application secret (`SEC-5` row 12) reaches a machine only
-      through `place_secret` (`ARC-43`): approved on a card, entered on that card, sent as the
+      through `place_secret` (`ARC-43`), and an application inference key (`SEC-5` row 24) only
+      through `place_inference_key`, with no value entered (`ARC-1b`, `CNF-118`); an application
+      secret is approved on a card, entered on that card, sent as the
       job's standard input and never as an argument, and never persisted by the job wrapper
       (`STA-20`). Verified by placing marked values and searching the actual model input,
       journal, transcript, machine job record and directory, logs and requests to the app's
@@ -487,7 +489,7 @@ an item that tests a mode's conditions or its label is tiered by them like any o
       satisfy all its placement gates and end that exact placement before its wait retires.
 
       Export/Restore and replay before correction, after correction but before re-arm, after
-      re-arm, and after each independent end, using payload version 8 (`CNF-84`). Report/time,
+      re-arm, and after each independent end, using payload version 8 or later (`CNF-84`). Report/time,
       ordered corrections/later reports, each no-active-scan interval and independent ends
       survive. A corrected live placement returns required and unarmed on Restore; re-arm
       neither clears any `reference_ended` mark nor releases any pre-loss record withheld for
@@ -1088,6 +1090,54 @@ an item that tests a mode's conditions or its label is tiered by them like any o
       on every inference call** (`ARC-31a`), because the aggregator's API default is the weaker
       tier. Verified by
       inspecting an outgoing request, not by trusting the aggregator's web-app default.
+- [ ] **CNF-118 · BLOCKING** An application inference key (`ARC-1b`, `SEC-5` row 24) is minted
+      only on the operator's press, reaches only its placement, outlives the session and ends
+      only in the three ways `ARC-1b` lists. On the procured path, with the model asking through
+      `request_harness_job` naming `place_inference_key`:
+      (a) The card offers exactly "Create key" and "Don't", with the cap of 0.25 US dollars,
+      the 30-day expiry and the terms `ARC-1b` lists. "Don't", and a card left unanswered, record
+      no mint intent and send nothing to the aggregator, verified at the aggregator by no new key
+      and no new spend; the request returns declined. A refusal by a `place_secret` check that
+      reads no value, a multi-tenant machine (an ad-hoc machine bound under the harness default
+      included), the bring-your-own path, a profile whose unit is not the US dollar and a profile
+      that does not support the cap or expiry each mint nothing and offer no "Create key".
+      (b) "Create key" records the mint intent before the send (`SEC-12`), one attempt only: a
+      lost, refused or uncertain mint, and broader, different, missing or unverifiable acceptance,
+      place nothing and are never retried, and a known identifier is revoked. The issuer's
+      accepted cap and expiry match the request.
+      (c) Search as `CNF-16` searches, with the minted key as the marked value: the model input,
+      journal, local store, transcript, machine job record and directory, logs, requests to the
+      app's origin and an exported sheet carry no carried occurrence of it, and the destination
+      holds exactly the key's bytes. The machine's state records the key's identifier, and the
+      mint terminal records the identifier and accepted facts without the key.
+      (d) After the placing session's End, and after an explicit app Lock and Unlock, the key is
+      still accepted at the issuer and no revoke of it was sent.
+      (e) Confirm the destroy of its machine (at LNVPS, the stop that stands in for one): a revoke
+      by its identifier is sent with the account credential, the issuer refuses the key
+      afterwards, and the trust display shows it revoked only after the issuer's confirmation.
+      Kill the page after the destroy's confirmation and before the revoke: reopening discharges
+      the owed revoke, without a session or model.
+      (f) The operator's Revoke action in the trust display, used once in a session and once
+      outside one, sends a revoke by the key's identifier with the account credential, never
+      through a session or model, and the issuer refuses the key afterwards.
+      (g) Close the page between the validated mint and the placement's send: nothing is placed,
+      the key is revoked by its identifier, and nothing mints a replacement. Until the issuer
+      confirms that revocation, the key stays listed with a Revoke action; a mint whose outcome is
+      unknown with no identifier is listed as a key that may exist until its recorded expiry.
+      (h) Rotate the placement through `place_inference_key`, and in a second run through
+      `place_secret`: each rotation's card and the trust
+      display say that the rotation revokes nothing and that the old key stays live until its
+      expiry, its machine's destruction or the operator's Revoke, never that the harness does not
+      verify revocation; no revoke of the old key is sent, and the old key stays listed with a
+      Revoke action after its placement's listing ends.
+      (i) Export a sheet, lose the local store and Restore it: every key the sheet carries is
+      listed as of export with its identifier, cap, expiry and revocation state, a key whose
+      placement was refused or never sent and one whose acceptance was unverified included; the
+      Revoke action
+      revokes it, and destroying its machine requests its revocation. A version-9 payload with a
+      record missing a member or carrying an extra one, a malformed field or two records with one
+      `key_id` is refused before binding; a version-8 payload restores with no keys.
+      Escaped secret; money out.
 
 ## The channel — `SEC-11`, `CHN-*`
 
@@ -3276,6 +3326,7 @@ promotion rule above.
 | Attest first-contact route | 18, 23 (attest-window case), 61, 74–75, 109 (attest admission) | Before enabling attest at any vendor that accepts boot configuration, including one used for a jump host. This row does not gate the LNVPS path. |
 | The dedicated path: the construction test bed | 20 (relabel cases), 22, 38, 48, 53 (`delivery_reboot` cases), 55 (`delivery_reboot` case), 62–64, 80, 84, 85–86, 109 (job-read admission), 110, 117 | The Robot dedicated path's own checks, including item 20's relabel cases, only item 84's Robot rescue case, item 53's `delivery_reboot` cases, as the LNVPS-path required row lists them, item 55's `delivery_reboot` settlement case, and item 110's reset-into-rescue, harness-composed `delivery_reboot` and `replace_root_label` refusal cases, and item 117's rescue rekey cases. Item 22 also covers the ordinary ceremony's consumer-side destination source and admission; its signed-addition cases apply where the ceremony makes signed additions, while source-before-dial cases also cover pre-recorded passes. Their by-hand evidence stands (48 is recorded), construction exercises them on the test bed, and they pass on the integrated harness before a dedicated-server path is offered to an operator, which is not before the admission group's gates pass (`STG-23`). Items 62–64 also apply to any typed adapter that rides the pinned tunnel, the LNVPS path's included if its vendor refuses a browser origin. |
 | Untyped scopes, the jump host, sets above one | 7, 12, 14, 23, 27, 29, 31, 33, 42, 91–93, 95 (cases (e) and (f)'s A/B assertions), 96–98, 104–106 | Before enabling an untyped scope, an untyped vendor scope, the jump-host route or a bound set of more than one machine. Item 95's cases (e) and (f) cover A/B output release only after both pastes until M's destruction is confirmed, and the releases and refusals after it; case (e) also covers the copied key on A redacted. Items 7 and 91 cover set growth, subsets and two-machine sets; items 12, 14 and 29 their untyped-scope cases; item 23 the jump-host label; item 42 the untyped-scope half of the trust display; item 93 the jump-host, untyped-scope and larger-set modes, each accepted at the act it governs and restated, with their re-entry and reinstall cases; item 104 an invoice decoded from an untyped response, where the vendor invoices; item 105 the untyped hold's every-job, same-origin, successor and permission-lifetime cases. Item 92's multi-tenant case gates sets above one; its independence-bound case gates the first profile that declares a bound. Repeat item 17 against real untyped responses. |
+| Application inference keys | 118 | Before the harness offers `place_inference_key` (`ARC-1b`), on the procured path; until it passes, the request is refused and no card offers "Create key". Every case, the operator's Revoke included, passes on the integrated harness. |
 | Post-harness handoff | 8, 77 | Before enabling any profile that declares one; none is enabled before the admission group's gates pass (`STG-23`). |
 | Scanner and advisory monitoring | 9, 36 | Also complete item 50's scanner case before exposing scanner results. |
 | Paid/public relay access | 57–60, 65, 76 | Before enrolment opens beyond the publisher's fixed record, including item 60's signed pass revocation. The LNVPS path uses item 20's manual retirement route and still requires 81 and 87. |

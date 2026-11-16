@@ -210,13 +210,13 @@ nonce and AAD `tau-web/sheet/v1/<id>/payload`; only the wrapped key persists. Th
 envelope adds `payload_nonce` and `payload` to the fields above. Never reuse a local-store
 key or envelope as a sheet. Local and sheet purposes cannot be interchanged.
 
-Exports use an authenticated UTF-8 JSON payload containing `version: 8` (below),
+Exports use an authenticated UTF-8 JSON payload containing `version: 9` (below),
 `derivation_version: 1`, `seed_id`, `exported_at` (UTC RFC 3339), `journal_sequence`,
 `next_indices` (machine/pass/handoff), `seed_backup`, `allocations` (including consumed
 tombstones), `retired_allocations`, `host_pins`,
 `host_pin_installations`, `relay_discovery`, `exposure_ledger`, `artifact_history`,
 `placements: [{seed_id, machine_index, application_name, name, path, placed_at, report, report_events, independent_end}]`, `machine_states`,
-and optional
+`application_inference_keys` (version 9, below), and optional
 `inference_account_credential`. Each allocation has its family, index, stable
 resource identity and expected public key as required by `STA-22b`, and a jump host's entry
 carries `jump_host: true`, recording that it is in no session's bound set, and no other
@@ -242,7 +242,7 @@ Imported starting URLs never replace the compiled discovery set B.
 
 Version 3 is accepted only by an explicit compatibility conversion that preserves every other
 version-3 field and its validation, wraps each recorded relay URL as `{"url":R}`, and supplies
-`relay_discovery:[]`. Never infer publisher identity from URL equality. Versions 4 to 8 use
+`relay_discovery:[]`. Never infer publisher identity from URL equality. Versions 4 to 9 use
 only the typed locator. Unknown payload versions and versions 1 and 2 remain unsupported. For
 publisher-key mismatch and migration, see `CHN-19`.
 This compatibility conversion changes neither the v1 encryption envelope nor derivation version 1,
@@ -310,7 +310,7 @@ later. For either partial history, its member names, the encoding of its gaps, w
 per-machine `installation` value needs an explicit unknown, what that machine's `legacy` and
 `known_unpinned` members hold, and how the ordinal-continuity rules apply to that machine are
 not yet specified. A new export writes
-version 8 (below), never version 6.
+version 9 (below), never version 6.
 
 ### Operator reports, payload version 7
 
@@ -388,7 +388,7 @@ own pre-send export start is unchanged.
 
 ### Report corrections, payload version 8
 
-Every export writes version 8. It preserves version 7's `report` unchanged and adds required
+Exports wrote version 8 until version 9 (below). It preserves version 7's `report` unchanged and adds required
 placement members `report_events` and `independent_end`, and, on each machine entry that stands
 for an approved entry, the members `entry` and `predecessor` (below). Every other version-7 field
 and validation remains, including its unspecified partial-history encoding, except that the
@@ -936,7 +936,7 @@ checked by form only. No placement
 value, digest, scan key, byte length or other value-derived reference is included. Payload
 versions 1 and 2 and unknown payload versions are unsupported: refuse them explicitly. Version 3
 has only the explicit compatibility conversion above, and missing placement or application lists
-are never interpreted as empty. Payload versions 4 to 8 change neither the v1 envelope,
+are never interpreted as empty. Payload versions 4 to 9 change neither the v1 envelope,
 derivation paths, algorithms, AAD nor known-answer vectors.
 Reject unknown versions, duplicate identities/indices and malformed fields before binding
 anything; imported data never creates a binding without vendor reconciliation and an
@@ -962,5 +962,30 @@ Restore and Replace for maintained cloud; `CNF-20`'s relabel cases, Robot rescue
 signed relay revocation follow their own rows in `07-conformance.md`'s applicability
 table. These are required implementation demonstrations, not claims that this specification
 has run them.
+
+### Application inference keys, payload version 9
+
+Every export writes version 9. It keeps every version-8 rule and adds one required payload
+member, `application_inference_keys`: an array, `[]` if none, with one record per application
+inference key that `STA-16` requires the sheet to carry (`ARC-1b`, `SEC-5` row 24). A record has
+exactly the members `seed_id`, `machine_index`, `application_name`, `name` and `path`, naming the
+destination the key was minted for as its card named it; `key_id`, the issuer's identifier as the
+journal records it, a non-empty string; `cap`, the requested cap as the mint intent recorded it,
+a canonical two-fractional-digit decimal in the profile's unit; `expires_at`, the requested
+absolute expiry the mint intent recorded, a whole Unix UTC second; `acceptance`, exactly
+`"validated"` when the issuer's acceptance was validated against that request, otherwise
+`"unverified"`; and `revocation`, exactly `"none"` or `"owed"`, as of export. The key itself, a
+digest of it and any other value derived from it are never included, and a mint with no known
+identifier has no record. A record needs no placement: it outlives a rotated, refused, never
+sent or destroyed placement until the key's revocation is confirmed or its expiry passes. Import refuses before binding a missing or extra member, a duplicate JSON member name, a
+malformed field, an empty `key_id`, two records with one `key_id`, and an unknown `acceptance` or
+`revocation`.
+Restore brings each record back as the key's facts as of export: the key is listed for the
+operator's Revoke, and an `"owed"` revocation, or one its machine's destruction requires, is owed
+again and requested as a new call. Versions 3 to 8 carry no such member, and an older payload
+with it is refused. A version-8 payload, or an older one after its explicit version-8 conversion,
+converts by supplying `application_inference_keys: []`, since no earlier export holds such a key.
+A reader that predates version 9 refuses it as an unknown payload; do not down-convert by
+dropping the keys.
 
 [relay-source]: https://github.com/douglaz/paid-tcp-relay/tree/49309df54dea3841f3cb1a37527f8d4ec9b5f1ab
