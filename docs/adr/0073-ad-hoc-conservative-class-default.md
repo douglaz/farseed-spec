@@ -77,6 +77,12 @@ asked. Here the question path stays open only during initial admission; after bi
 conflict is explained and no question is asked. A review panel picked the refusal, three of
 four readers with a fifth seat unavailable, accepted under the owner's 2026-11-05 panel rule.
 The dissent was to ask after binding and then admit the behavior through every check.
+*(Partly superseded on 2026-11-16 by
+[ADR-0088](./0088-the-harness-mints-an-application-inference-key-that-outlives-the-session.md):
+on an ad-hoc machine bound under the harness default, the application inference key's card may
+ask the classification question after binding, and only the operator's answer there that the
+machine serves no parties they have never met makes it single-purpose. No other request uses
+that path.)*
 
 Conformance for class admission and the after-binding refusal is in `CNF-100`; dependent
 restriction cases are in `CNF-92`, `CNF-52`, `CNF-94` and `CNF-99`. Maintained access and
