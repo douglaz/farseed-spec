@@ -192,9 +192,12 @@ trusted-party list MUST NOT grow silently".
 
 **TRU-E12 — The model provider of an operator's application**, where the operator installs one
 (`ARC-1a`). An always-on agent with a model of its own sends what it reads on its machine to
-whoever serves that model, under a key the operator supplied as an application secret. The
-harness neither chooses that party nor asks anything of it: the retention request of `ARC-31a`
-and the counts of `ARC-14` cover the harness's own inference and none of the application's.
+whoever serves that model, under a key the operator supplied as an application secret. Under an
+application inference key the harness minted for it (`ARC-1b`), the application reaches its
+model through the procured path's aggregator, which the operator's press chose for it; otherwise
+the harness does not choose that party. Either way the harness asks nothing of it: the retention
+request of `ARC-31a` and the counts of `ARC-14` cover the harness's own inference and none of
+the application's.
 Elective — it comes with the application the operator chose — and listed in the trust display
 beside the application for as long as a live placement without an uncorrected operator report names that
 application on that machine. An uncorrected report (`ARC-43`) ends only its own placement's part in that

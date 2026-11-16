@@ -6,7 +6,12 @@
 machine is a target of the harness, never an actor for it: it MUST NOT hold a credential
 belonging to the harness — an inference key, a vendor API token, the key of an untyped vendor
 scope (`SEC-3`, `CNF-11`). Its one exception is the attest sender key, which `SEC-5` row 7
-lets authorize "One host-key introduction" and nothing else (`CHN-7`). And the harness MUST NOT
+lets authorize "One host-key introduction" and nothing else (`CHN-7`). An application inference
+key (`ARC-1b`) is not a credential belonging to the harness: the harness mints it from the
+operator's inference account for an operator's application, only on the operator's press.
+Harness code never uses it for inference and the model has no tool that does, although a model
+with root on its machine can read it there, as it can any application secret (`SEC-5` row 12).
+And the harness MUST NOT
 ask a machine to act: nothing a machine
 sends starts work in the harness
 ([ADR-0003](./docs/adr/0003-the-ai-runs-only-in-the-browser.md), narrowed by
@@ -19,7 +24,9 @@ its only authority is the one-time introduction, handled as the credential `SEC-
 A harness inference key on a machine is a harness credential living outside browser memory, and
 a machine that can call the harness's model unprompted is the harness acting unprompted — which
 is the thing this project exists to avoid. A machine that can send an event the browser treats
-as content is not that, and the typing is what makes the difference.
+as content is not that, and the typing is what makes the difference. Nor is a machine holding an
+application inference key: the application's calls with it are its own, under that key's cap;
+they reach no session, and nothing they return starts work in the harness.
 
 *What this requirement used to say* was that the AI runs in the browser and that a machine
 "MUST NOT initiate work". Read as a rule about every AI and every machine, that forbids the
@@ -34,7 +41,9 @@ harness's AI and the harness's credentials and says nothing against it. What the
 about one:
 
 - **Its key is an application secret** (`SEC-5` row 12), placed by `place_secret` (`ARC-43`).
-  It is the operator's credential for the application, never a harness credential.
+  It is the operator's credential for the application, never a harness credential. Its inference
+  key may instead be an application inference key the harness mints for it (`ARC-1b`), which is
+  the application's credential in the same way.
 - **The harness MUST record each installed application under a name unique on its machine.**
   Names are compared by exact string equality; applications on different machines may have
   the same name. The name identifies the application in its secret placement and recovery record.
@@ -48,6 +57,95 @@ about one:
   covers the declared machine state and the fixed lockdown checks, and MUST say, substituting
   the application's name: "It does not mean Hermes works". The card carries `ARC-43`'s evidence
   labels beside Delivered where applicable.
+
+**ARC-1b An operator's application may be given an inference key the harness mints for it, and
+that key outlives the session.** On the procured path (`ARC-31a`), at the model's request and on
+the operator's press, the harness mints an **application inference key** from the inference
+account credential (`SEC-5` row 14) for one application recorded on one machine of the bound
+set, and places it there under `place_secret`'s rules (`ARC-43`). It is that application's
+credential and never a session's key; of an application's key `ARC-1a` says "It is the
+operator's credential for the application, never a harness credential". `SEC-5` row 24 is its row
+([ADR-0088](./docs/adr/0088-the-harness-mints-an-application-inference-key-that-outlives-the-session.md)).
+What the harness owes:
+
+- **The model asks; the operator answers once.** The model asks through `request_harness_job`,
+  naming `place_inference_key` with the arguments `place_secret` takes and no value. Before
+  anything is minted, the harness runs every `place_secret` check that does not read the value;
+  a refusal mints nothing. Otherwise it composes one card whose only answers are **"Create
+  key"** and **"Don't"**. "Create key" approves the mint and the placement together, with no
+  second press. "Don't" mints nothing, sends nothing to the aggregator and spends nothing, and
+  the request returns to the model as declined. An unanswered card mints nothing, and a new
+  request composes a new card.
+- **The card states the terms.** It states what `place_secret`'s card states, except the
+  sentence on a key the operator minted at its service. It also says that the key is minted from
+  the operator's inference balance, with the cap and expiry below; that it outlives the session
+  and ends only when its machine is destroyed, its expiry passes or the operator revokes it; and
+  that it can read the account's usage history, as a session key can: `ARC-31a` says "A session
+  key can read the account's usage history". Where a rotation, through either job, would end a
+  placement that holds an application inference key, its card says, in place of `place_secret`'s
+  statement that revoking the old value at its service is the operator's act, which the harness
+  does not verify, that the rotation revokes nothing and that the old key stays live until its
+  expiry, its machine's destruction or the operator's Revoke below.
+- **The cap and expiry are fixed.** Each key's cap is 0.25 US dollars, and its expiry is 30 days
+  (2,592,000 seconds) after the origin of its mint authorization, fixed and recorded as
+  `ARC-31a` fixes a session key's. A key is minted only where the pinned profile (`ARC-31a`)
+  names the US dollar as the account's spend-accounting unit, at 0.25 in that unit; where it
+  names another unit, or does not support that cap or expiry, the card says so and offers only
+  "Don't". The operator sets neither: the 1 to 1440 minute range, the Start confirmation and the
+  renewal are a session key's. The key MUST NOT be able to raise its own cap, mint another or
+  attach funding, as a session key cannot.
+- **One attempt per press, recorded first.** The mint is the inference adapter's own off-machine
+  call (`SEC-12`), under `ARC-31a`'s intent, issuer-validation and clock rules for one mint, with
+  the press where a session's confirmation stands. Its terminal follows `ARC-31a`'s terminal
+  rules except the seal: it records the key's identifier and the issuer's accepted facts, never
+  the key, and no lost-key hold applies. A durable intent consumes the press's one attempt. A refused, lost, malformed or uncertain mint, or broader, different,
+  missing or unverifiable acceptance, places nothing and is never retried; a known identifier is
+  revoked.
+- **The key goes only to its placement.** From the validated mint response the key travels only
+  as `place_secret`'s value: the job's standard input, under its custody, scan-reference
+  (`SEC-5` row 23) and cross-check rules. It never enters model context, and it is never
+  journaled, kept in the local store, exported in the sheet or shown. `place_secret`'s value
+  checks apply to it, except that it is not compared with itself as a credential the harness
+  holds. A key whose placement is refused, cancelled or never sent, or whose bytes are lost
+  before they are sent, is revoked by its identifier, and nothing mints a replacement. In every
+  other rule that names an application secret or `SEC-5` row 12, its placement is an application
+  secret's placement.
+- **Its identifier stays with its machine.** The issuer's identifier for the key, never the key,
+  is journaled with the placement in that machine's state, with the key's cap and expiry, and the
+  recovery sheet carries them (`STA-16`). A Restore therefore keeps every revocation duty below:
+  a restored key is listed as of export and can be revoked by its identifier.
+- **It outlives the session.** It is not a key the session minted (`ARC-31a`). A session's End,
+  expiry or cap exhaustion and an explicit app Lock neither revoke it nor end its placement, and
+  End owes no revocation of it.
+- **Three things end it, and nothing else.** (1) Its machine's destruction: once the harness's
+  destroy of that machine is confirmed under its operation contract (at LNVPS, the stop that
+  stands in for a destroy, `ARC-22`), or once the existing deletion evidence for that machine is
+  durably recorded (`SEC-5`), whichever comes first, the harness requests its revocation. (2) Its
+  expiry, which the issuer enforces. (3) The operator's revocation: the harness MUST list in the
+  trust display every application inference key that is neither confirmed revoked nor past its
+  expiry, whatever its placement's state (rotated, refused, never sent, or on a destroyed
+  machine), with its machine, application name, cap, expiry and revocation state, and offer a
+  Revoke action there, in a session or outside one; on that act the harness requests its
+  revocation. A mint whose outcome is unknown and whose identifier is not known is listed too, as
+  a key that may exist until that mint's recorded expiry, which the harness cannot revoke. Each revocation
+  request is harness code's, made with the account credential under its existing custody, never
+  a session's or a model's. An owed revocation survives reopening and is discharged by the
+  model-free cleanup path, and a possibly sent revoke is reconciled, never blindly resent, as
+  `ARC-31a`'s revocation owed after End is. The key is shown revoked only on the issuer's
+  confirmation; unknown revocation stays unknown, and expiry is not evidence of it. Revocation
+  ends the key, not its placement: the placement, its scan reference and its placement listing
+  end as `ARC-43` and `SEC-5` say. A rotation, through either job, revokes nothing.
+- **Not on a multi-tenant machine.** The key spends inference credit, and `ARC-37` says "A
+  multi-tenant machine MUST NOT hold spendable key material". On a multi-tenant machine
+  (`ARC-36`), an ad-hoc machine bound under the harness default included, a request for one is a
+  request requiring a less restrictive class: it is refused before any card, as `ARC-36a` refuses
+  such a request, and nothing is minted.
+- **Not without the account credential.** On the bring-your-own path nothing is minted: the
+  request is refused, and the operator may place a key obtained elsewhere with `place_secret`.
+
+The exposure from one leaked application inference key is the lesser of the remaining balance
+and its cap, under the conditions `ARC-31a` sets on a session key's bound. Anything with root on
+its machine can read it, a later session's model included (`SEC-5` row 12).
 
 **ARC-2** The harness has no executor outside the operator's browser. Closing or losing its
 page/worker stops browser work; already accepted remote work can outlive it. A merely hidden
@@ -335,6 +433,9 @@ output. The jobs are:
   `STA-20b` withholds the offer.
 - `place_secret` — writes one **application secret** (`SEC-5` row 12) to a file on a named
   machine of the bound set. Its rules are below.
+- `place_inference_key` — writes one **application inference key** (`SEC-5` row 24), minted for
+  it, to a file on a named machine of the bound set, under `place_secret`'s rules as `ARC-1b`
+  qualifies them. Its rules are `ARC-1b`'s.
 - `digest_secret` — a harness-initiated read of a recorded placement, under the rules below.
   The model MUST NOT request it through `request_harness_job` or supply its command.
 - `delivery_reboot` — a harness-initiated reboot outside LNVPS, only as the evidence clause
@@ -542,8 +643,9 @@ here is non-waivable:
   and the stop that stands in for a destroy (`ARC-22`) are not rotation or destruction.
 
 A key the operator minted at its service with a cap, or one the operator can revoke there, is
-the best practice, and the card says so. The harness mints nothing for an application: a key
-minted from the inference account would be a harness credential on a machine (`ARC-1`). A
+the best practice, and the card says so. The harness mints a key for an application only as an
+application inference key, through `place_inference_key` under `ARC-1b`; such a key is the
+application's credential, not a harness credential on a machine (`ARC-1`). A
 rotation's card says, before the operator approves it, that the rotation is not a revocation, and
 that revoking the old value at its service is the operator's act, which the harness does not
 verify: `SEC-5` says "The rotation claims neither revocation of the old value at its service nor
@@ -741,8 +843,8 @@ omitted placements or missing exposure-ledger edges
 ([ADR-0075](./docs/adr/0075-report-correction-restores-future-protection.md)).
 
 The model's tool set on the LNVPS path is exactly four: `exec` (a box-plane command it composed),
-`request_harness_job` (`fetch_artifact`, `ready_to_reset` or `place_secret`, by name, with the
-arguments that job admits),
+`request_harness_job` (`fetch_artifact`, `ready_to_reset`, `place_secret` or
+`place_inference_key`, by name, with the arguments that job admits),
 `request_typed_operation` (a cloud-plane operation, approved on facts), and `done`. Each names
 its machine (`ARC-7`). There is no tool by which the model
 reports a value, so a wrong or hostile report cannot pass `CNF-24` or pin a key. A model in
@@ -1630,8 +1732,11 @@ the publisher from model selection and, locally, the proxy layer entirely.
 
 **ARC-31a The procured credential is two-tier, and a session holds only the lower tier.**
 
-- The **account credential** funds and governs. It mints and revokes session keys, and it is the
-  only thing that can attach a funding source. It is the operator's, held encrypted at rest and
+- The **account credential** funds and governs. It mints and revokes session keys, and
+  application inference keys under `ARC-1b`, and it is the only thing that can attach a funding
+  source. An application inference key is an application's, not a third tier of the harness's
+  credential: no session uses one, it is not a key a session minted, and of the session-key
+  rules here only those `ARC-1b` names govern it. It is the operator's, held encrypted at rest and
   exported in the recovery sheet (`STA-16`), because it is spendable balance and nothing
   re-derives it.
 - A **session inference key** is minted per session with a spend cap and an expiry, and revoked
