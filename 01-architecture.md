@@ -426,8 +426,9 @@ The cost is stated: anything genuinely interactive — an installer that stops t
 MUST be handled by the brief rather than answered live.
 
 **ARC-43 Values the harness checks MUST come from jobs the harness composed, the vendor's
-`/rescue/last` for a rescue boot's host keys (`CHN-R1`), an attest seal for installed-system
-host keys (`CHN-R5`), or LNVPS published host keys only as an installed-system pin (`CHN-R7`),
+`/rescue/last` for a rescue boot's host keys (`CHN-R1`), an attest seal (`CHN-R5`) or a host
+certificate accepted under `CHN-R5a` for installed-system host keys, or LNVPS published host keys
+only as an installed-system pin (`CHN-R7`),
 read by direct fetch from the recorded vendor status response over browser-terminated TLS,
 or operation-confirmation evidence admitted by `STA-24`; never from model text.**
 For attest duties, `CHN-R5` says "accepts the fingerprints only if the seal's author is the sender key it planted"; `CHN-5` says "Single-use MUST be enforced by the browser, not by any relay".
@@ -580,7 +581,8 @@ and `TauWeb.Pins.installed_pin_from_model_text_admitted`. The companion carries 
 path, attest and `CHN-R7`, with `TauWeb.Pins.published_source_admitted` and
 `TauWeb.Pins.published_rescue_refused` exercising the new source boundary. A pin taken at a
 jump-host first contact
-(`CHN-R6`) is not among `TauWeb.Pins.Source`'s cases (T45). The
+(`CHN-R6`) is not among `TauWeb.Pins.Source`'s cases (T45), and neither is one accepted under
+`CHN-R5a`. The
 pin-source and delivery-reboot settlement clauses of `ARC-43` are formalized, except that
 `ready_to_reset` journals no pin of a read sharing the rescue boot's pin, which is Markdown-only
 (`STA-20b`). The discovery refusals above, the written-root refusal among them, and their

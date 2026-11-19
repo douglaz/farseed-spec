@@ -1209,9 +1209,10 @@ an item that tests a mode's conditions or its label is tiered by them like any o
       `CNF-58` includes "an unrelated eligible public target on SSH and other
       ports"; keep that case. These are consumer source/admission checks, not
       relay-side ownership enforcement.
-- [ ] **CNF-23 · BLOCKING** A first contact with no stored pin is **refused through the
-      relay** (`CHN-R4`, `CHN-2`). Verified by offering a machine with no pin and no jump host
-      and confirming that no session opens and no key is pinned; and by closing an attest
+- [ ] **CNF-23 · BLOCKING** A first contact with neither a stored pin nor an unconsumed attest
+      certificate authority inside its deadline (`CHN-R5a`) is **refused through the relay**
+      (`CHN-R4`, `CHN-2`). Verified by offering a machine with no pin, no unconsumed `CHN-R5a`
+      authority and no jump host and confirming that no session opens and no key is pinned; and by closing an attest
       window with no accepted seal and confirming the harness offers a recreate and no login
       to a system whose key nothing can check (`CHN-R5`). Under `CHN-R6` only, the first
       contact is presented to the operator as trusted through a jump host at the named vendor,

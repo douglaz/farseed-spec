@@ -53,6 +53,7 @@ inductive Credential
   | attestRecipient
   | relay
   | postHarness
+  | attestAuthority
   deriving DecidableEq, Repr
 
 /-- How the 32-byte child secret is read: as an RFC 8032 Ed25519 seed, or as a secp256k1
@@ -73,7 +74,7 @@ structure Row where
 
 /-- The number of roles the table defines; `total` decides that every number below it has a
 row and `closed` proves nothing above it does. -/
-def count : Nat := 5
+def count : Nat := 7
 
 /-- The role table of `credential-format-v1.md`, keyed by role number. -/
 @[req "STA-22a"] def row : Nat → Option Row
@@ -82,10 +83,11 @@ def count : Nat := 5
   | 2 => some ⟨.machine, .attestRecipient, .secp256k1⟩
   | 3 => some ⟨.pass, .relay, .secp256k1⟩
   | 4 => some ⟨.handoff, .postHarness, .ed25519Seed⟩
+  | 6 => some ⟨.machine, .attestAuthority, .ed25519Seed⟩
   | _ => none
 
-/-- Every role number below `count` has a row. -/
-@[req "STA-22a"] theorem total : ∀ n, n < count → (row n).isSome := by decide
+/-- Every role number below `count` except the reserved 5 has a row. -/
+@[req "STA-22a"] theorem total : ∀ n, n < count → n ≠ 5 → (row n).isSome := by decide
 
 /-- No role number at or above `count` has one: a new algorithm needs a new role, never a
 reinterpretation. -/
@@ -94,9 +96,9 @@ reinterpretation. -/
   obtain ⟨k, rfl⟩ := Nat.exists_eq_add_of_le' h
   rfl
 
-/-- Roles 0, 1 and 2 share the machine index; roles 3 and 4 do not. -/
+/-- Machine family iff n ≤ 2 or n = 6: roles 0, 1, 2 and 6 share the machine index; roles 3 and 4 do not. -/
 @[req "STA-22a"] theorem machine_index_shared :
-    ∀ n, n < count → ((row n).map Row.family = some .machine ↔ n ≤ 2) := by decide
+    ∀ n, n < count → ((row n).map Row.family = some .machine ↔ (n ≤ 2 ∨ n = 6)) := by decide
 
 /-! ## The allocator -/
 

@@ -45,13 +45,13 @@ def expected():
         primitive_seed
     ).DerivePath("m/0'").PrivateKey().Raw().ToBytes()
     rows = []
-    for role in range(5):
+    for role in (0, 1, 2, 3, 4, 6):
         for index in range(2):
             path = f"m/707285'/1'/{role}'/{index}'"
             private = derive(seed, [707285, 1, role, index])
             independent = Bip32Secp256k1.FromSeed(seed).DerivePath(path)
             assert private == independent.PrivateKey().Raw().ToBytes()
-            if role in (0, 4):
+            if role in (0, 4, 6):
                 public = ed25519.Ed25519PrivateKey.from_private_bytes(private).public_key()
                 raw = public.public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw)
                 assert raw == Ed25519PrivateKey.FromBytes(private).PublicKey().RawCompressed().ToBytes()[-32:]
@@ -82,4 +82,4 @@ if __name__ == "__main__":
     elif sys.argv[1:]:
         raise SystemExit("usage: check-credential-vectors.py [--write]")
     check(json.loads(fixture.read_text()), wanted)
-    print("PASS: 10 v1 key vectors agree across independent implementations")
+    print("PASS: 12 v1 key vectors agree across independent implementations")

@@ -922,8 +922,9 @@ nothing re-derives the past.
 **STA-22 The operator holds a seed, and every per-machine credential the browser needs derives
 from it.** A BIP-39 mnemonic, held encrypted at rest and backed up by the operator the way
 this audience already backs up seeds. For machine *m*, the browser derives at index *m*: the
-SSH client keypair (`SEC-5` row 3), the attest sender key (row 7) and the attest recipient key
-(row 16); and for relay pass *n*, on its own branch, the relay key (row 4). A tenant whose
+SSH client keypair (`SEC-5` row 3), the attest sender key (row 7), the attest recipient key
+(row 16) and the attest certificate authority (row 25); and for relay pass *n*, on its own branch,
+the relay key (row 4). A tenant whose
 handoff slot declares a credential also derives one **post-harness credential** (row 17)
 on its own branch. Derivation is the versioned, role-separated contract in `STA-22a`; an
 implementation must not choose paths independently.
