@@ -1146,11 +1146,35 @@ and a new pass uses the fresh seed. Neither vendor inventory nor the publisher i
 backup service. Export is recommended after each allocation, including on dedicated.
 
 **STA-23 The local store has an explicit unlock boundary.** The operator chooses a local
-passphrase, separate from the seed backup and the recovery-sheet passphrase. A random data
+passphrase, separate from the seed backup and the recovery-sheet passphrase. Its length is the
+operator's choice ([ADR-0089](./docs/adr/0089-the-local-unlock-passphrase-is-recommended-not-required.md)).
+The page recommends 16 or more Unicode code points, kept in a password manager, and accepts any
+length, including none. Before a store is created, or the passphrase changed, with fewer than
+16 Unicode code points, the screen MUST state in plain words, for the length entered:
+
+- with none, anyone who can open this browser profile, or who holds a copy of its data, opens
+  the store;
+- with a short one, anyone who holds a copy of this browser profile's data can guess it offline
+  and then open the store;
+- in both cases, opening the store gives the seed, which reaches every maintained machine and
+  relay pass, and any inference account credential it holds, which spends its balance;
+- with a non-empty one, the publisher cannot recover the passphrase.
+
+A store with such a passphrase is created, or the passphrase so changed, only by the operator's
+explicit action while that statement is shown; no implicit submission (Enter in the field, or
+the keyboard's Next or Go) does it. An empty passphrase keeps the unlock boundary. Wherever an
+unlock is required, including before seed re-display, the operator explicitly activates Unlock
+with nothing typed. At unlock, unlike create or change, Enter in the empty field also activates
+Unlock.
+
+A random data
 key encrypts the journal, snapshots, seed, pins, ledger, inference account credential and
 placed-secret scan references (`SEC-5` row 23);
 only a passphrase-wrapped data key persists. The credential format defines the local envelopes, KDF and authentication rules,
 including the authenticated fenced-key birth extension for fresh local stores. There is no plaintext or device-synced fallback.
+An empty passphrase uses the same format: the random data key encrypts the store and the
+PBKDF2-derived wrapping key wraps that key. Its protection against anyone holding the stored
+bytes is stated in `SEC-5` row 18.
 
 The unlock view explains the local unlock passphrase as access to this device's encrypted
 store, separate from the items retained for recovery in `STA-15`'s checklist.
@@ -1319,7 +1343,12 @@ Only the procured paid session key gains encrypted local persistence; no off-dev
 Before session admission, and beside the app Lock action, the harness MUST plainly show that switching apps or locking the device screen may leave data-key, seed, account and machine authority unlocked in memory indefinitely; permitted work, including already approved destructive actions such as a disk wipe, may run unseen.
 It MUST also state that End is the kill switch, Lock pauses, dormant sessions retain their
 machines, the paid session key is encrypted at rest, and an already approved destructive act
-can run after reload or kill without a new tap. Already accepted remote work may continue
+can run after reload or kill without a new tap. For a store whose local passphrase is empty, it
+MUST also state that Lock keeps out no one who can use the unlocked phone, since Unlock is one
+press, and that encryption at rest protects the paid session key only as far as the device and
+browser profile do. The harness knows the passphrase is empty from the entry at create, change
+or unlock. It holds that fact in memory only while unlocked and persists nothing about the
+passphrase's length. Already accepted remote work may continue
 after End. The phone may freeze or discard the page. This standing disclosure adds no
 acknowledgement ceremony or guaranteed time to withdraw. The UI MUST show the actual running,
 held, reconciling, expired, ended, locked or lost state on return. BYO and local sessions
@@ -1669,8 +1698,8 @@ with no recovery path at all. Now that the keys have moved to the seed, the bala
 must say so plainly rather than inheriting the old warning.
 
 **STA-17** Recovery after a *lost* phone revokes; restore after a *dead* one may not. A
-stolen phone's encrypted store may eventually be unlocked, so the flows are named and
-distinct, and the screen says which one is happening
+stolen phone's encrypted store may eventually be unlocked, at once if its local passphrase was
+empty (`STA-23`), so the flows are named and distinct, and the screen says which one is happening
 ([ADR-0040](./docs/adr/0040-stage-one-includes-restore-and-replace.md)):
 
 - **Replace** (the default, for a phone that is lost): generate a **new seed** (`STA-22`), then

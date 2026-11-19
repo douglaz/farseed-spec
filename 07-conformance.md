@@ -160,7 +160,11 @@ an item that tests a mode's conditions or its label is tiered by them like any o
       card and the trust display said so before the scope was approved (`SEC-4`, `SEC-5`
       row 9).
 - [ ] **CNF-15 · BLOCKING** No credential appears in cleartext in origin-private storage,
-      local storage, or service-worker caches. *(`STG-10`)*
+      local storage, or service-worker caches. *(`STG-10`)* A store whose local passphrase is
+      empty or short (`STA-23`, ADR-0089) is no exception: its credentials persist only as
+      ciphertext under the data key, whose only persisted copy is wrapped under the
+      PBKDF2-derived wrapping key. Its weaker protection is checked against `STA-23`'s
+      statement (`CNF-82`), not waived here.
 - [ ] **CNF-16 · BLOCKING** An application secret (`SEC-5` row 12) reaches a machine only
       through `place_secret` (`ARC-43`), and an application inference key (`SEC-5` row 24) only
       through `place_inference_key`, with no value entered (`ARC-1b`, `CNF-118`); an application
@@ -2419,6 +2423,24 @@ Not pass/fail. Required to be recorded.
       the next unlock still owes the ceremony. A failed append leaves it owed. Re-display
       requires the passphrase again, pauses sessions and uses the same ceremony; no other
       display exists. Imported seeds, with sheet or store backup, owe no ceremony.
+      On a physical Android Chrome (`STG-14`), create once with an empty passphrase and once
+      with 15 Unicode code points, some outside the Basic Multilingual Plane, each in a fresh
+      origin:
+      - `STA-23`'s statement for that length shows before Create; no implicit submission
+        (Enter, or the keyboard's Next or Go) creates; the store exists only after the
+        explicit Create;
+      - after reload and after Lock, the empty-passphrase store stays locked until the
+        operator explicitly activates Unlock with nothing typed; the input `x` is refused as
+        a wrong passphrase without creating a replacement store;
+      - the persisted envelope keeps the format and parameters, and persisted bytes hold no
+        credential in cleartext (`CNF-15`);
+      - re-display asks for the passphrase again, which for the empty one is the explicit
+        unlock with nothing typed;
+      - changing to an empty or short passphrase shows the same statement and needs the same
+        explicit action.
+
+      Check the admission and Lock disclosure's empty-passphrase statement (`STA-23`): it
+      shows for the empty-passphrase store and not for a store with a non-empty passphrase.
       Escaped-secret.
 - [ ] **CNF-116 · BLOCKING** Session pause/resume (`STA-3`, `STA-7`, `STA-23`, `ARC-12`,
       `ARC-31a`, `SEC-1`, `SEC-4`): exercise Lock, pagehide/bfcache, reload, worker shutdown,
