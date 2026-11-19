@@ -87,8 +87,10 @@ representation and its limitations.
 
 ## Local encryption envelope
 
-The operator supplies a local passphrase of at least 16 Unicode code points; encourage a
-password manager. Encode it as UTF-8 **without normalization or trimming**. Derive a 32-byte
+The operator supplies a local passphrase of any length, including none: 16 or more Unicode
+code points, kept in a password manager, is recommended, not enforced
+([ADR-0089](../adr/0089-the-local-unlock-passphrase-is-recommended-not-required.md)). Encode it
+as UTF-8 **without normalization or trimming**; an empty passphrase is the empty byte string. Derive a 32-byte
 wrapping key with PBKDF2-HMAC-SHA-256, 600,000 iterations and a fresh CSPRNG 16-byte salt.
 This uses WebCrypto's native KDF; the work factor follows the
 [OWASP PBKDF2 guidance](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#pbkdf2).
@@ -96,6 +98,8 @@ Unlock latency was measured at 58 ms on the first-stage phone, in an Android Web
 than the Chrome tab `OVR-1` names — the same WebCrypto, not yet the same host
 ([findings, 2026-09-11](../findings/2026-09-11-unlock-latency.md)); changing the KDF requires
 a versioned migration, not a silent downgrade. A weak passphrase remains vulnerable to offline guessing.
+An empty one protects nothing beyond the device and its browser profile: one KDF run with the
+stored salt opens the store.
 
 Generate a fresh 32-byte data key and 16-byte store ID. AES-256-GCM wraps the data key under
 the wrapping key with a fresh random 12-byte nonce and a 128-bit tag. Persist a JSON envelope
@@ -105,7 +109,8 @@ fields use unpadded base64url. The authenticated additional data is exactly UTF-
 `tau-web/local/v1/` followed by the encoded ID. Reject wrong lengths, unknown fields,
 unknown algorithms or versions and wrong parameters before invoking the KDF. Duplicate keys
 need not be detected (the platform parser cannot); the envelope is written only by this
-implementation, and any altered field fails the tag.
+implementation, and any altered field fails the tag unless the wrapping key is known, as it is
+when the passphrase is empty or guessed (`SEC-5` row 18).
 
 Encrypt each journal record and snapshot separately under the data key, using AES-256-GCM
 with a fresh CSPRNG 12-byte nonce and a 128-bit tag. Bind store ID, record type, monotonically
@@ -120,11 +125,14 @@ addressing; store that exact serialization instead of reconstructing it on read.
 
 Never perform 2^32 encryptions under one data key; re-encrypt under a fresh key before that
 bound. A passphrase change uses a fresh salt and nonce to rewrap the data key and commits the
-replacement atomically. It does not revoke a previously copied envelope. Corruption or
+replacement atomically. It does not revoke a previously copied envelope: a copy taken while
+the passphrase was empty or short stays open to that passphrase. Corruption or
 authentication failure stops replay; never skip a record. A disposition that `STA-24`'s test
 refuses is not a skipped record: it stays in the journal and is replayed, ends no call,
 restricts nothing and is shown. This detects modification and
-mixing, **not rollback of the entire store** by a compromised device. Importing a backup
+mixing by a party without the data key, **not rollback of the entire store** by a compromised
+device. Anyone holding a copy of the store and its empty or guessed passphrase has the data key
+and can forge records that authenticate (`SEC-5` row 18). Importing a backup
 therefore invokes the allocation restrictions in `STA-22b`.
 
 Only the harness worker holds the unwrapped data/wrapping keys. Clear the passphrase and
