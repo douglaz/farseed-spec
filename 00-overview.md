@@ -213,7 +213,8 @@ alter. `CHN-R1` pins from the vendor and is dedicated-only; **`CHN-R2` is dead**
 **abandoned** — user-data stays readable from the vendor's metadata endpoint for the
 instance's life, so an injected host key would be permanently re-fetchable by anything on the
 machine. Where a vendor takes boot configuration, **`CHN-R5` — attest** — has the machine introduce its own key over
-Nostr under keys the browser derives from the operator's seed
+Nostr, or in a host certificate signed by a one-time authority (`CHN-R5a`), under keys the browser
+derives from the operator's seed
 ([ADR-0029](./docs/adr/0029-the-machine-speaks-nostr-and-keys-derive-from-a-seed.md));
 the real-first-boot experiment and its limits are in
 `docs/findings/2026-10-09-attest-first-boot.md`, and `OPN-3` tracks remaining evidence.

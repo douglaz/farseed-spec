@@ -200,12 +200,12 @@ ALLOC=tools/formal/TauWeb/Allocation.lean
 
 # `lake build` accepts a sorry with a warning; only the gate's axiom walk sees sorryAx.
 formal_control "formal: a sorry the build accepts" \
-  "sed -i 's/^@\[req \"STA-22a\"\] theorem total : ∀ n, n < count → (row n).isSome := by decide$/@[req \"STA-22a\"] theorem total : ∀ n, n < count → (row n).isSome := by sorry/' $ALLOC && grep -q ':= by sorry' $ALLOC" \
+  "sed -i 's/^@\[req \"STA-22a\"\] theorem total : ∀ n, n < count → n ≠ 5 → (row n).isSome := by decide$/@[req \"STA-22a\"] theorem total : ∀ n, n < count → n ≠ 5 → (row n).isSome := by sorry/' $ALLOC && grep -q ':= by sorry' $ALLOC" \
   "TauWeb.Allocation.total (STA-22a) depends on [sorryAx]"
 
 # The same proof inside and outside Explore: only the outside one is refused.
 formal_control "formal: native_decide outside Explore" \
-  "printf '\nnamespace TauWeb.Explore\ntheorem in_explore : TauWeb.Allocation.count = 5 := by native_decide\nend TauWeb.Explore\ntheorem TauWeb.Allocation.outside_explore : TauWeb.Allocation.count = 5 := by native_decide\n' >> $ALLOC" \
+  "printf '\nnamespace TauWeb.Explore\ntheorem in_explore : TauWeb.Allocation.count = 7 := by native_decide\nend TauWeb.Explore\ntheorem TauWeb.Allocation.outside_explore : TauWeb.Allocation.count = 7 := by native_decide\n' >> $ALLOC" \
   "TauWeb.Allocation.outside_explore uses native_decide outside TauWeb.Explore" \
   "in_explore"
 

@@ -32,12 +32,13 @@ silently skipping to another path; a failed reserved allocation remains consumed
 | `2` | Same **machine** index | **Attest recipient** | **secp256k1** secret; Nostr BIP-340 x-only public key |
 | `3` | **pass** | **Relay** | **secp256k1** secret; Nostr BIP-340 x-only public key |
 | `4` | **handoff** | **Post-harness credential** | 32-byte big-endian child scalar used as an RFC 8032 **Ed25519 seed** |
+| `6` | Same **machine** index | **Attest certificate authority** | 32-byte big-endian child scalar used as an RFC 8032 **Ed25519 seed**; OpenSSH `ssh-ed25519` public-key encoding; signs one host certificate (`CHN-R5a`) and nothing else |
 <!-- /formal -->
 
 The family, credential and child-secret columns of this table are carried as
 `TauWeb.Allocation.row` (ADR-0032): its totality over the roles it defines is decided, and
-`TauWeb.Allocation.machine_index_shared` proves that roles 0, 1 and 2 share the machine index
-and roles 3 and 4 do not. The public-key encoding stays here, as prose in the last column.
+`TauWeb.Allocation.machine_index_shared` proves that roles 0, 1, 2 and 6 share the machine index,
+roles 3 and 4 do not, and role 5 is reserved. The public-key encoding stays here, as prose in the last column.
 
 The Ed25519 mapping uses the child bytes as the **seed**, never as an already-expanded
 Ed25519 scalar. Nostr signing follows BIP-340's parity normalization. Only raw child secrets
@@ -210,7 +211,7 @@ nonce and AAD `tau-web/sheet/v1/<id>/payload`; only the wrapped key persists. Th
 envelope adds `payload_nonce` and `payload` to the fields above. Never reuse a local-store
 key or envelope as a sheet. Local and sheet purposes cannot be interchanged.
 
-Exports use an authenticated UTF-8 JSON payload containing `version: 9` (below),
+Exports use an authenticated UTF-8 JSON payload containing `version: 10` (below),
 `derivation_version: 1`, `seed_id`, `exported_at` (UTC RFC 3339), `journal_sequence`,
 `next_indices` (machine/pass/handoff), `seed_backup`, `allocations` (including consumed
 tombstones), `retired_allocations`, `host_pins`,
@@ -310,7 +311,7 @@ later. For either partial history, its member names, the encoding of its gaps, w
 per-machine `installation` value needs an explicit unknown, what that machine's `legacy` and
 `known_unpinned` members hold, and how the ordinal-continuity rules apply to that machine are
 not yet specified. A new export writes
-version 9 (below), never version 6.
+version 10 (below), never version 6.
 
 ### Operator reports, payload version 7
 
@@ -819,7 +820,8 @@ a version-7 sheet as an unknown version. Versions 1 and 2 and unknown versions s
 v1, derivation v1, algorithms, AAD and known-answer vectors stay unchanged.
 
 Each `host_pins` entry names the host-key route that produced it: `retrieve` (`CHN-R1`),
-`attest` (`CHN-R5`), `jump_host` (`CHN-R6`) or `lnvps_retrieve` (`CHN-R7`). The last
+`attest` (`CHN-R5`), `attest_certificate` (`CHN-R5a`), `jump_host` (`CHN-R6`) or `lnvps_retrieve`
+(`CHN-R7`). The last
 value records the retrieved LNVPS hypervisor-scan provenance and is restored with the pin;
 it does not authorize a new first contact. Import MUST refuse a missing, unknown or malformed
 route value before binding, as it does other malformed payload fields. Each installed-system
@@ -936,7 +938,7 @@ checked by form only. No placement
 value, digest, scan key, byte length or other value-derived reference is included. Payload
 versions 1 and 2 and unknown payload versions are unsupported: refuse them explicitly. Version 3
 has only the explicit compatibility conversion above, and missing placement or application lists
-are never interpreted as empty. Payload versions 4 to 9 change neither the v1 envelope,
+are never interpreted as empty. Payload versions 4 to 10 change neither the v1 envelope,
 derivation paths, algorithms, AAD nor known-answer vectors.
 Reject unknown versions, duplicate identities/indices and malformed fields before binding
 anything; imported data never creates a binding without vendor reconciliation and an
@@ -965,7 +967,7 @@ has run them.
 
 ### Application inference keys, payload version 9
 
-Every export writes version 9. It keeps every version-8 rule and adds one required payload
+Exports wrote version 9 until version 10 (below). It keeps every version-8 rule and adds one required payload
 member, `application_inference_keys`: an array, `[]` if none, with one record per application
 inference key that `STA-16` requires the sheet to carry (`ARC-1b`, `SEC-5` row 24). A record has
 exactly the members `seed_id`, `machine_index`, `application_name`, `name` and `path`, naming the
@@ -987,5 +989,14 @@ with it is refused. A version-8 payload, or an older one after its explicit vers
 converts by supplying `application_inference_keys: []`, since no earlier export holds such a key.
 A reader that predates version 9 refuses it as an unknown payload; do not down-convert by
 dropping the keys.
+
+### Certificate attest route, payload version 10
+
+Every export writes version 10. It keeps every version-9 field and rule and adds the `host_pins` route
+value `attest_certificate` (`CHN-R5a`). Versions 3 to 9 carry no such value, and an older payload with it
+is refused. A version-9 payload, or an older one after its explicit conversions to version 9, converts to
+version 10 without changing any pin or provenance. A reader that predates version 10 refuses it as an
+unknown payload; do not down-convert by relabelling the route. A historical pin with either attest route
+records that its introduction was consumed; import reconstructs that state even when the pin is retired.
 
 [relay-source]: https://github.com/douglaz/paid-tcp-relay/tree/49309df54dea3841f3cb1a37527f8d4ec9b5f1ab

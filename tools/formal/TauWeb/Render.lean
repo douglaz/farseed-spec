@@ -78,6 +78,7 @@ def credentialToken : Credential → String
   | .attestRecipient => "**Attest recipient**"
   | .relay => "**Relay**"
   | .postHarness => "**Post-harness credential**"
+  | .attestAuthority => "**Attest certificate authority**"
 
 open TauWeb.Allocation in
 def secretToken : Secret → String

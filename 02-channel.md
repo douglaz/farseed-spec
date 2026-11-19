@@ -8,11 +8,12 @@ The check that matters happens inside the SSH protocol at the application layer,
 right key is pinned the transport underneath is irrelevant to confidentiality and integrity.
 
 **CHN-2** An SSH session MUST check the host key against the stored fingerprint, and a key
-that does not match MUST halt the session. A first contact with no stored fingerprint MUST be
-refused through the relay (`CHN-R4`). The one such contact the harness makes runs from a jump
+that does not match MUST halt the session. A first contact with neither a stored fingerprint nor
+an unconsumed attest certificate authority inside its deadline (`CHN-R5a`) MUST be refused
+through the relay (`CHN-R4`). The one such contact the harness makes runs from a jump
 host, inside a session pinned out of band (`CHN-R6`); it is trusted, not checked against a
-pin, and MUST be presented to the operator as such. No other path may accept a key no pin was
-stored for.
+pin, and MUST be presented to the operator as such. No other path may accept a key that neither
+a stored pin nor an unconsumed `CHN-R5a` authority, inside its deadline, vouches for.
 
 Connection readiness MUST NOT cache admission to send. Every command or job-record collection
 request MUST re-enter the current machine-traffic check immediately before sending, after
@@ -45,7 +46,7 @@ flowchart TD
     PROD -->|LNVPS installed system| R7["CHN-R7 — retrieve<br/>published hypervisor scan<br/>✅ admitted for the LNVPS path"]
     R2 --> R2D["☠️ DEAD, verified<br/>rescue returns an action and a<br/>root password. No host key"]
     R2D --> BOOT{"Does the harness compose<br/>the machine's boot configuration?"}
-    BOOT -->|"Yes — boot configuration"| R5["CHN-R5 — attest<br/>per-machine derived sender key in user-data;<br/>machine gift-wraps its fingerprints to a<br/>per-machine derived recipient over Nostr<br/>🔶 first-boot finding; browser checks open — OPN-3"]
+    BOOT -->|"Yes — boot configuration"| R5["CHN-R5 — attest<br/>per-machine derived sender key in user-data;<br/>machine gift-wraps its fingerprints to a<br/>per-machine derived recipient over Nostr<br/>or a one-time host certificate (CHN-R5a)<br/>🔶 first-boot finding; browser checks open — OPN-3"]
     BOOT -->|"No — an untyped vendor scope,<br/>or a vendor with no route of its own"| R6["CHN-R6 — jump host<br/>first contact inside a session pinned<br/>to a temporary, model-free machine<br/>🔶 an acceptable weaker mode, labelled"]
     R5 -->|"if the post never arrives"| RC["Recreate the machine.<br/>No weaker route is entered"]
     R6 -.->|"the jump host itself is pinned by attest"| R5
@@ -168,6 +169,11 @@ again, is worthless to a later reader. A host private key never expires.
 Attest covers the same vendors — anywhere with boot-time user-data — so nothing is lost but the
 route.
 
+*Reconsidered 2026-11-17.* Injecting a host key and rotating it in the first session was weighed against the
+certificate envelope (`CHN-R5a`) and not adopted: rotation needs a pin replacement inside one installation,
+and the certificate envelope gives the same first-contact protection without one. This route stays
+abandoned.
+
 **CHN-R5 — attest.** The machine introduces its own host key to the browser over Nostr, under
 keys the browser **derives** rather than stores
 ([ADR-0029](./docs/adr/0029-the-machine-speaks-nostr-and-keys-derive-from-a-seed.md)).
@@ -182,6 +188,18 @@ re-derives at will, and accepts the fingerprints **only if the seal's author is 
 it planted**. A relay cannot forge that seal, so there is no trust-on-first-use. The vendor
 holds the sender key and could forge one — but it owns the machine's disk and memory and could
 replace the host keys wholesale regardless, so attest hands it nothing it lacks.
+
+**Who else can read the introduction credential.** Both envelopes put a credential in user-data, and the
+vendor is not its only reader. Each typed adapter MUST declare the vendor's user-data exposure: read-back
+through the vendor's API by a token with read ability (yes, no or unknown), and service from the metadata
+endpoint for the instance's life (yes, no or unknown). During the introduction a reader of the credential
+can substitute a host key of its own. With the Nostr envelope it needs no position on the path, because
+anyone can publish to the inbox and the first valid seal wins (`CHN-5`); it needs the path only later, to
+use the key it had pinned. With the certificate envelope (`CHN-R5a`) it must also hold the first contact's
+path. A successful acceptance does not show that no substitution happened. The trust display MUST name the
+route ("attested over Nostr" or "attested by host certificate") and the residual: the vendor, and anyone who
+can read user-data as the adapter declares while the introduction is open, acting with anyone on the path
+(for the Nostr envelope, at any later time; for the certificate envelope, at first contact).
 
 The author check is carried by `TauWeb.Pins.wrong_author_refused` and
 `TauWeb.Pins.wrong_author_admitted`; a valid introduction admits a matching installed-system
@@ -206,6 +224,43 @@ harness offers to destroy it and create it again, which re-runs attest under a f
 nothing could check, "with the leap of faith displayed". It was withdrawn on 2026-10-05: it is
 trust on first use through the relay under another name, and `CHN-R4` refuses that. `SEC-14`
 says "A failed check halts".
+
+**CHN-R5a — attest by host certificate.** A second envelope for `CHN-R5`'s introduction, for a vendor whose
+typed adapter composes boot-time user-data. Its credential is the machine's **attest certificate
+authority** (`SEC-5` row 25): an Ed25519 key derived from the seed at the machine's index under its own role
+(`STA-22a`, role `6`). The Nostr sender key is secp256k1 and is never reinterpreted.
+
+- **At create.** Before the create call is dispatched, the browser MUST journal the machine's introduction:
+  the route, the authority's public half, the machine entry and an absolute deadline taken from
+  `bundle/timing.toml`, set from a measured slowest first boot plus the time to first contact (`CHN-6`'s
+  rule). Harness code composes the user-data through the typed adapter: the authority's private half, the
+  SSH client public key and a first-boot hook. No model supplies or alters any of it. The host private key
+  MUST NOT enter user-data.
+- **On the machine.** The hook runs once per instance. The machine generates its own host keys, with image
+  keys deleted; the hook signs the Ed25519 host public key with the authority as an OpenSSH host certificate
+  whose principal is the machine entry's identifier and whose validity ends no later than the deadline,
+  points sshd at the certificate, and scrubs the authority's private half from cloud-init's artifacts. As in
+  `CHN-6`, the scrub is defence in depth and MUST NOT be described as the bound.
+- **First contact.** Through the relay, before client authentication or any other use, the browser MUST
+  accept the presented host key only if it comes as a host certificate that verifies under exactly the
+  journaled authority, certifies an `ssh-ed25519` key, names the machine entry as its principal, carries no
+  critical option, and is presented while the browser's own clock is before the deadline; the key exchange
+  proves possession of the certified key's private half. A bare key, another signer, a user certificate, a
+  malformed certificate or a failed check admits no contact and enters no weaker route (`SEC-14`).
+- **Acceptance is single-use.** The certified key's fingerprint, its route, the machine and installation
+  binding and the consumed state of the introduction MUST be journaled together (`STA-3`) before the
+  connection admits authentication, commands or placements. Concurrent handshakes share one serialized
+  acceptance, and the introduction is consumed once. From then on the pin is the certified key's fingerprint
+  alone: a presented certificate is reduced to its inner key and admits nothing but the pin, the authority
+  never admits another key, and the first session removes sshd's `HostCertificate` line. The installed host
+  key survives reboot; certificate expiry does not expire the pin.
+- **No arrival, no weaker route.** A deadline that passes with no accepted certificate ends that machine's
+  first contact: the harness offers only destroy and recreate, as for `CHN-R5`. Lock, restart, retries,
+  Restore and reinstall neither extend the deadline nor renew a consumed or expired introduction; uncertain
+  recovery reopens nothing (`STA-16`). An active installed-system pin from any route disables introduction
+  admission (`CHN-5`).
+- **Unavailable without verification.** Where the page's SSH client cannot verify host certificates as
+  above, this envelope is unavailable; no failure selects another envelope.
 
 **CHN-R6 — a first contact from a jump host.** For a machine at a vendor with no route of its
 own — no endpoint that publishes a host key, and no boot configuration the harness composes —
@@ -348,7 +403,9 @@ connect, pinning it and alarming on any later change is what ordinary SSH client
 harness MUST NOT do it through the relay. Every connection the browser makes to a machine runs
 through the relay, so a key accepted there is the relay's word; an impostor at that position
 would have its own key pinned and receive every secret placed afterwards. A first contact with
-no independently obtained pin is admitted only from a jump host (`CHN-R6`).
+no independently obtained pin is admitted only from a jump host (`CHN-R6`), or through the relay
+under a host certificate that verifies under an unconsumed attest certificate authority inside its
+deadline (`CHN-R5a`).
 
 What survives of this route is **continuity**, which `SEC-11` applies to every pin however it
 was obtained: a later change halts. It detects a network or relay attacker that turns hostile
@@ -399,8 +456,9 @@ distinguish a genuine seal from junk — it never holds the sender key — so a 
 property. The **browser** unwraps, checks the seal's author against the sender key it planted,
 accepts the first match, pins, and **stops listening for that recipient**. Anyone able to write
 to the inbox — everyone, on a public relay — can flood it with garbage or race it: garbage fails
-the author check, and a *validly sealed* race requires the sender key, which only the vendor also
-holds. A flooded or empty inbox is a denial of service that forces a recreate (`CHN-R5`),
+the author check, and a *validly sealed* race requires the sender key, which the vendor holds and
+so does anyone who can read user-data as the adapter declares (`CHN-R5`). Such a race can win, and
+that is the residual `CHN-R5` names. A flooded or empty inbox is a denial of service that forces a recreate (`CHN-R5`),
 nothing more.
 
 **Attest is a first contact only for the current installation.** Once a machine holds an
