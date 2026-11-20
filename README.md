@@ -1,4 +1,4 @@
-# tau-web
+# Farseed
 
 Design work for a client-side AI harness that lets someone with only a phone provision and
 operate real infrastructure, without trusting any party that could act on their behalf.
@@ -12,7 +12,7 @@ members to reach the threshold* — belongs to btc-policy, the tenant that stack
 "Verified" is not a claim this design can make.
 
 No harness code here, by decision (ADR-0031): the implementation is
-[`douglaz/tau-web-rust`](https://github.com/douglaz/tau-web-rust), which pins this repository
+[`douglaz/farseed`](https://github.com/douglaz/farseed), which pins this repository
 by commit as its `spec/` submodule. This repository holds the specification, the domain language,
 the decisions taken so far, and the reasoning that produced them. `bundle/` holds the
 publisher-chosen values the implementation compiles in, `prototypes/` holds throwaway spikes
@@ -22,7 +22,7 @@ that answer open questions by running, `docs/findings/` holds what they found,
 companion (ADR-0032): `nix develop --command bash tools/check-all.sh` runs them all, the
 formal gate first.
 
-`tau-web` is a working name.
+Farseed was called `tau-web` until November 2026; the documents still use the old name.
 
 ## Start here
 
@@ -168,3 +168,16 @@ Two rows of `SEC-5`'s credential table are retired in place, struck through, kee
 numbers because prose cites them by number: row 8, the drop-box collection token, went with the
 drop-box (`CHN-4`); row 13, the injected SSH host private key, went when `CHN-R3` was abandoned.
 They are rows, not identifiers, and the gate does not read them.
+
+## License
+
+Licensed under either of
+
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE))
+- MIT license ([LICENSE-MIT](LICENSE-MIT))
+
+at your option.
+
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in
+this work by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without
+any additional terms or conditions.
